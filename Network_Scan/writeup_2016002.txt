@@ -1,0 +1,20 @@
+Usage: ./scan <Host IP Address> <port-range> [Flags (-sS(default), -sF, -sU)]
+ 
+Assumptions:
+	- For best functioning (especially in UDP), the scanning machine minimal side-traffic.
+
+Methodology:
+	For both the cases we make a raw socket (SOCK_RAW), so as to bypass TCP/IP processing by the OS.
+
+	For the TCP scan, we iterate over each port, and send a valid TCP (SYN or FIN) request. After that we listen on the socket for a response. 
+	Since it's TCP, a response would be sent, which may be positive or negative of the port's status, and depending on it, we can list down the port as open/closed.
+
+	Types of TCP scanning:
+		-	SYN scan, the TH_SYN flag is used in the th_flags field.
+		-	FIN scan, the TH_FIN flag is used in the th_flags field. For this, a response is sent if the port is closed, otherwise it is assumed open or filtered by firewall. 
+
+	For UDP scanning, the wikipedia page (https://en.wikipedia.org/wiki/Port_scanner#UDP_scanning) says that a closed port would respond with an ICMP_UNREACH response. And based on this reponse (or rather absence of this response), the port is probably open. It may also be filtered by the firewall, but there is no way to tell.
+
+	This method sometimes lists other ports as open too, because it is not able to get a reply to the data sent earlier. To rectify this to a certain extent, a small usleep() is used after sending the packet, so as to give enough time for the ICMP response to be generated and pinged back to us.
+
+	Another way to do this is to send application specific payload, which nmap does with around 20 UDP ports, but in absence of those resources, this program sticks with the ICMP_UNREACH approach.
